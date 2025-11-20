@@ -1,3 +1,3 @@
 <?php 
-  header("main.zip")
+  header("Location:movie.zip")
 ?>
