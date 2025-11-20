@@ -2,48 +2,58 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Launcher News Editor</title>
+<title>Launcher News Editor (GitHub API)</title>
 <style>
 body { font-family: Arial, sans-serif; background: #121212; color: white; padding: 20px; }
 h1 { color: #00ff44; }
-textarea { width: 100%; height: 150px; margin-bottom: 10px; background: #1e1e1e; color: white; border: 1px solid #333; padding: 5px; }
-button { background: #333; color: white; padding: 10px 20px; border: none; cursor: pointer; }
-button:hover { background: #555; }
-.news-item { border-bottom: 1px solid #333; padding: 10px 0; }
+textarea, input { width: 100%; padding:5px; margin-bottom:5px; background:#1e1e1e; color:white; border:1px solid #333; }
+button { background:#333; color:white; padding:10px 20px; border:none; cursor:pointer; margin:5px 0;}
+button:hover { background:#555; }
+.news-item { border-bottom:1px solid #333; padding:10px 0; }
 </style>
 </head>
 <body>
 
-<h1>Launcher News Editor</h1>
-<div id="news-list"></div>
+<h1>Launcher News Editor (GitHub API)</h1>
 
 <h2>Add New News</h2>
-<input type="text" id="title" placeholder="Title" style="width:100%; padding:5px; margin-bottom:5px;">
+<input type="text" id="title" placeholder="Title">
 <textarea id="description" placeholder="Description"></textarea>
-<button onclick="addNews()">Add News</button>
+<input type="text" id="token" placeholder="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">
+<button onclick="addNews()">Add & Upload</button>
+
+<h2>Current News</h2>
+<div id="news-list"></div>
 
 <h2>JSON Output</h2>
 <textarea id="json-output" readonly></textarea>
 
 <script>
-let newsData = { "news": [] };
-const NEWS_URL = "https://raw.githubusercontent.com/YourUsername/Launcher/main/news.json";
+const GITHUB_USER = "GeorgiaRolePlay";
+const REPO = "Launcher";
+const FILE_PATH = "news.json";
+const BRANCH = "main";
 
-// Fetch current news.json
-fetch(NEWS_URL)
-.then(response => response.json())
-.then(data => {
-    newsData = data;
-    renderNews();
-})
-.catch(err => {
-    console.error("Failed to load news.json", err);
-});
+let newsData = { "news": [] };
+
+// Load current news.json from GitHub
+async function loadNews() {
+    try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO}/contents/${FILE_PATH}?ref=${BRANCH}`);
+        const data = await res.json();
+        const content = atob(data.content); // decode base64
+        newsData = JSON.parse(content);
+        newsData.sha = data.sha; // save SHA for updates
+        renderNews();
+    } catch (e) {
+        console.error("Failed to load news.json", e);
+    }
+}
 
 function renderNews() {
     const newsList = document.getElementById("news-list");
     newsList.innerHTML = "";
-    newsData.news.forEach((item, idx) => {
+    newsData.news.forEach((item) => {
         const div = document.createElement("div");
         div.className = "news-item";
         div.innerHTML = `<strong>${item.title}</strong><p>${item.description}</p>`;
@@ -52,15 +62,51 @@ function renderNews() {
     document.getElementById("json-output").value = JSON.stringify(newsData, null, 4);
 }
 
-function addNews() {
+async function addNews() {
     const title = document.getElementById("title").value.trim();
     const description = document.getElementById("description").value.trim();
-    if(!title || !description) { alert("Please fill title and description."); return; }
+    const token = document.getElementById("token").value.trim();
+
+    if (!title || !description || !token) { alert("Fill all fields."); return; }
+
     newsData.news.push({title, description});
+
+    // Encode content
+    const contentStr = JSON.stringify({news: newsData.news}, null, 4);
+    const b64Content = btoa(unescape(encodeURIComponent(contentStr)));
+
+    try {
+        const res = await fetch(`https://api.github.com/repos/${GITHUB_USER}/${REPO}/contents/${FILE_PATH}`, {
+            method: "PUT",
+            headers: {
+                "Authorization": `token ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                message: "Update news.json via Launcher HTML",
+                content: b64Content,
+                sha: newsData.sha,
+                branch: BRANCH
+            })
+        });
+        const result = await res.json();
+        if (res.status === 200 || res.status === 201) {
+            alert("news.json updated successfully!");
+            newsData.sha = result.content.sha; // update SHA
+            renderNews();
+        } else {
+            alert("Failed to update news.json: " + JSON.stringify(result));
+        }
+    } catch (e) {
+        alert("Error: " + e);
+    }
+
     document.getElementById("title").value = "";
     document.getElementById("description").value = "";
-    renderNews();
 }
+
+// Initialize
+loadNews();
 </script>
 
 </body>
