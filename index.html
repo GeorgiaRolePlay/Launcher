@@ -1,12 +1,67 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>Georgia Role Play Launcher Files</title>
+<meta charset="UTF-8">
+<title>Launcher News Editor</title>
+<style>
+body { font-family: Arial, sans-serif; background: #121212; color: white; padding: 20px; }
+h1 { color: #00ff44; }
+textarea { width: 100%; height: 150px; margin-bottom: 10px; background: #1e1e1e; color: white; border: 1px solid #333; padding: 5px; }
+button { background: #333; color: white; padding: 10px 20px; border: none; cursor: pointer; }
+button:hover { background: #555; }
+.news-item { border-bottom: 1px solid #333; padding: 10px 0; }
+</style>
 </head>
 <body>
-	<center><h1>Georgia Role Play Launcher Files</h1></center>
-	<center><h4>GERP OFFICAL</h4></center>
+
+<h1>Launcher News Editor</h1>
+<div id="news-list"></div>
+
+<h2>Add New News</h2>
+<input type="text" id="title" placeholder="Title" style="width:100%; padding:5px; margin-bottom:5px;">
+<textarea id="description" placeholder="Description"></textarea>
+<button onclick="addNews()">Add News</button>
+
+<h2>JSON Output</h2>
+<textarea id="json-output" readonly></textarea>
+
+<script>
+let newsData = { "news": [] };
+const NEWS_URL = "https://raw.githubusercontent.com/YourUsername/Launcher/main/news.json";
+
+// Fetch current news.json
+fetch(NEWS_URL)
+.then(response => response.json())
+.then(data => {
+    newsData = data;
+    renderNews();
+})
+.catch(err => {
+    console.error("Failed to load news.json", err);
+});
+
+function renderNews() {
+    const newsList = document.getElementById("news-list");
+    newsList.innerHTML = "";
+    newsData.news.forEach((item, idx) => {
+        const div = document.createElement("div");
+        div.className = "news-item";
+        div.innerHTML = `<strong>${item.title}</strong><p>${item.description}</p>`;
+        newsList.appendChild(div);
+    });
+    document.getElementById("json-output").value = JSON.stringify(newsData, null, 4);
+}
+
+function addNews() {
+    const title = document.getElementById("title").value.trim();
+    const description = document.getElementById("description").value.trim();
+    if(!title || !description) { alert("Please fill title and description."); return; }
+    newsData.news.push({title, description});
+    document.getElementById("title").value = "";
+    document.getElementById("description").value = "";
+    renderNews();
+}
+</script>
+
 </body>
 </html>
